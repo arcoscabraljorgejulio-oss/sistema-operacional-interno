@@ -1,6 +1,17 @@
 import streamlit as st
+from supabase import create_client
 
-# Título do Sistema Interno
+# --- CONEXÃO COM O SUPABASE ---
+SUPABASE_URL = st.secrets["SUPABASE_URL"]
+SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
+
+@st.cache_resource
+def init_supabase():
+    return create_client(SUPABASE_URL, SUPABASE_KEY)
+
+supabase = init_supabase()
+
+# --- TELA DO SISTEMA ---
 st.title("💼 Sistema Operacional Interno")
 st.markdown("Gerenciamento de Caixa, Troco Misto e Agendamentos")
 
@@ -10,7 +21,6 @@ st.divider()
 with st.form("form_atendimento"):
     st.subheader("Registrar Atendimento / Caixa")
     
-    # Campo de texto livre
     texto_operador = st.text_area(
         "Descreva o atendimento:", 
         placeholder="Ex: Corte do João, R$ 80, pagou com nota de 100 em dinheiro e troco de 20 em Pix. Feito pelo Carlos."
@@ -20,15 +30,22 @@ with st.form("form_atendimento"):
     
     if botao_enviar:
         if texto_operador.strip():
-            st.success("Transação processada com sucesso!")
-            st.json({
-                "status": "sucesso",
-                "mensagem_recebida": texto_operador,
-                "nota": "Aqui o seu script de IA estruturará os dados e salvará no Supabase em breve!"
-            })
+            try:
+                # Salvando na tabela 'cash_flow' que criamos no Supabase
+                dados_para_salvar = {
+                    "raw_text": texto_operador
+                }
+                
+                resposta = supabase.table("cash_flow").insert(dados_para_salvar).execute()
+                
+                st.success("Transação salva com sucesso no Supabase! 🟢")
+                st.json(dados_para_salvar)
+                
+            except Exception as e:
+                st.error(f"Erro ao salvar no banco de dados: {e}")
         else:
             st.warning("Por favor, digite os detalhes do atendimento antes de enviar.")
 
 # Área lateral
 st.sidebar.header("Painel de Controle")
-st.sidebar.info("Status: Configurando ambiente 🟢")
+st.sidebar.info("Status: Conectado ao Supabase 🟢")
